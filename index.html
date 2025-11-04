@@ -34,10 +34,23 @@
     "@onnxruntime/web": "./vendor/onnx/ort-wasm.mjs",
     "onnxruntime-web/webgpu": "./vendor/onnx/ort-wasm.mjs",
     "onnxruntime-web/webnn": "./vendor/onnx/ort-wasm.mjs",
-    "onnxruntime-web/wasm": "./vendor/onnx/ort-wasm.mjs"
+    "onnxruntime-web/wasm": "./vendor/onnx/ort-wasm.mjs",
+
+    "https://cdnjs.cloudflare.com/ajax/libs/onnxruntime-web/1.18.0/ort-wasm-simd-threaded.mjs": "./vendor/onnx/ort-wasm-simd-threaded.mjs",
+    "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.18.0/dist/ort-wasm-simd-threaded.jsep.mjs": "./vendor/onnx/ort-wasm-simd-threaded.mjs",
+    "https://unpkg.com/onnxruntime-web@1.18.0/dist/ort-wasm-simd-threaded.jsep.mjs": "./vendor/onnx/ort-wasm-simd-threaded.mjs"
   }
 }
 </script>
+
+<script>
+  // Alguns builds do ORT leem essas flags cedo; isso ajuda a evitar tentativas de threads.
+  (self.ort ||= { env: { wasm: {} } });
+  ort.env.wasm.numThreads = 1;
+  ort.env.wasm.simd = false;
+  ort.env.wasm.proxy = false;
+</script>
+
 
 <script type="module">
   // ===== CONFIG =====
