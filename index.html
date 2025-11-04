@@ -34,11 +34,12 @@
 const MODEL_BASE = "https://eudantas2024.github.io/novoaudio/models/pt_BR/";
 const VOICE_ID = "pt_BR-edresson-low";
 
-import * as tts from "https://cdn.jsdelivr.net/npm/@mintplex-labs/piper-tts-web@0.8.2/dist/index.esm.js";
+import * as tts from "https://esm.sh/@mintplex-labs/piper-tts-web@0.7.1";
+
 
 import "./vendor/onnx/ort-wasm.js";
 import "./vendor/onnx/ort-wasm.mjs";
-import "./vendor/onnx/ort-wasm-simd-threaded.wasm";
+
 
 let lastWavBlob = null;
 
