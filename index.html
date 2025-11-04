@@ -1,11 +1,112 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
-</head>
-<body>
-    
-</body>
+<!doctype html>
+<html lang="pt-BR">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Piper Minimal TTS</title>
+<style>
+  body{background:#101820;color:#fff;font-family:system-ui;padding:20px}
+  textarea{width:100%;height:180px;border:0;border-radius:8px;padding:12px;font-size:18px;margin-bottom:12px;background:#182232;color:#fff}
+  button{padding:14px 22px;border-radius:10px;border:0;font-weight:700;font-size:17px;cursor:pointer;margin-right:10px;background:#6b5bff;color:#fff}
+  #player{width:100%;margin-top:16px}
+</style>
+
+<h1>Piper TTS Browser</h1>
+
+<textarea id="text">Olá, este é meu teste em Piper Web Assembly usando voz pt_BR-edresson-low.</textarea>
+<button id="btn">Gerar Áudio</button>
+<button id="dl">Baixar MP3</button>
+
+<audio id="player" controls></audio>
+
+<script type="importmap">
+{
+  "imports": {
+    "onnxruntime-web": "./vendor/onnx/ort-wasm.mjs",
+    "@onnxruntime/web": "./vendor/onnx/ort-wasm.mjs",
+    "onnxruntime-web/webgpu": "./vendor/onnx/ort-wasm.mjs",
+    "onnxruntime-web/webnn": "./vendor/onnx/ort-wasm.mjs",
+    "onnxruntime-web/wasm": "./vendor/onnx/ort-wasm.mjs"
+  }
+}
+</script>
+
+<script type="module">
+const MODEL_BASE = "https://eudantas2024.github.io/novoaudio/models/pt_BR/";
+const VOICE_ID = "pt_BR-edresson-low";
+
+import * as tts from "https://cdn.jsdelivr.net/npm/@mintplex-labs/piper-tts-web@latest/dist/index.esm.min.js";
+
+import "./vendor/onnx/ort-wasm.js";
+let lastWavBlob = null;
+
+async function ensureModel(){
+  try{
+    await tts.download(VOICE_ID, ()=>{});
+  }catch(e){}
+}
+
+async function generate(){
+  const text = document.getElementById("text").value.trim();
+  if(!text)return;
+
+  await ensureModel();
+
+  const wavBlob = await tts.predict({
+    text,
+    voiceId: VOICE_ID
+  });
+
+  lastWavBlob = wavBlob;
+  document.getElementById("player").src = URL.createObjectURL(wavBlob);
+}
+
+document.getElementById("btn").onclick = generate;
+
+// MP3
+import "https://cdn.jsdelivr.net/gh/zhuker/lamejs@master/lame.all.js";
+
+function parseWavToPCM16(wavBuffer){
+  const dv = new DataView(wavBuffer);
+  let pos = 12;
+  while (pos < dv.byteLength){
+    const id = dv.getUint32(pos, false);
+    const size = dv.getUint32(pos+4, true);
+    if (id===0x64617461){ // 'data'
+      const pcm = new Int16Array(wavBuffer, pos+8, size/2);
+      const sampleRate = dv.getUint32(24, true);
+      return { pcm, sampleRate };
+    }
+    pos+=8+size;
+  }
+  throw new Error("data chunk not found");
+}
+
+function encodeMP3(pcm, sampleRate){
+  const enc = new lamejs.Mp3Encoder(1, sampleRate, 128);
+  const frame = 1152;
+  const out=[];
+  for(let i=0;i<pcm.length;i+=frame){
+    const chunk=pcm.subarray(i,i+frame);
+    const buf=enc.encodeBuffer(chunk);
+    if(buf.length) out.push(new Int8Array(buf));
+  }
+  const end=enc.flush(); if(end.length) out.push(new Int8Array(end));
+  let total=0; out.forEach(b=> total+=b.length);
+  const u8=new Uint8Array(total);
+  let off=0; out.forEach(b=>{u8.set(b,off); off+=b.length;});
+  return new Blob([u8],{type:"audio/mpeg"});
+}
+
+document.getElementById("dl").onclick = async ()=>{
+  if(!lastWavBlob) return;
+  const ab = await lastWavBlob.arrayBuffer();
+  const { pcm, sampleRate } = parseWavToPCM16(ab);
+  const mp3 = encodeMP3(pcm, sampleRate);
+  const url = URL.createObjectURL(mp3);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "voz.mp3";
+  a.click();
+};
+</script>
 </html>
